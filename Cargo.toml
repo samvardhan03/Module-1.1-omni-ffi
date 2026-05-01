@@ -1,0 +1,19 @@
+[package]
+name = "omni-ffi"
+version = "0.1.0"
+edition = "2021"
+authors = ["Samvardhan Singh"]
+description = "Zero-cost C++/CUDA FFI Bridge for the OmniPulse WST Engine"
+
+[features]
+default = []
+# Enables the GPU code path. Links cudart + cufft and compiles the CUDA
+# bridge translation unit. Requires nvcc + CUDA toolkit on the build host.
+# Not buildable on macOS — intended for Linux GPU build hosts.
+cuda = []
+
+[dependencies]
+cxx = "1.0"
+
+[build-dependencies]
+cxx-build = "1.0"
