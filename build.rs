@@ -3,20 +3,11 @@ use std::path::PathBuf;
 
 fn main() {
     let crate_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-
-    // Path to the upstream Module-I-omni-wst-core C++ engine sources.
-    // Override at build time with `OMNI_WST_CORE_CPP=/abs/path cargo build`.
-    // Default assumes the engine repo lives next to the omni-ffi crate.
-    let engine_cpp = env::var("OMNI_WST_CORE_CPP")
-        .map(PathBuf::from)
-        .unwrap_or_else(|_| crate_dir.join("../Module-I-omni-wst-core/cpp"));
-
     let cuda_enabled = env::var_os("CARGO_FEATURE_CUDA").is_some();
 
     let mut build = cxx_build::bridge("src/lib.rs");
     build
         .include(crate_dir.join("cpp"))
-        .include(&engine_cpp)
         .flag_if_supported("-std=c++17")
         .flag_if_supported("-Wno-unused-function")
         .flag_if_supported("-Wno-unused-parameter");
@@ -27,7 +18,25 @@ fn main() {
         // kernel objects (wst_kernel.cuh / jtfs_kernel.cuh / wst_bridge.cu)
         // are expected to be pre-built into a static lib that the consuming
         // binary links via `cargo:rustc-link-search`.
+        //
+        // The upstream Module-I-omni-wst-core C++ engine sources are needed
+        // for CUDA kernel headers. Override the path at build time with:
+        //   OMNI_WST_CORE_CPP=/abs/path cargo build --features cuda
+        let engine_cpp = env::var("OMNI_WST_CORE_CPP")
+            .map(PathBuf::from)
+            .unwrap_or_else(|_| crate_dir.join("../Module-I-omni-wst-core/cpp"));
+
+        if !engine_cpp.exists() {
+            panic!(
+                "\n\nomni-ffi CUDA build error: upstream engine sources not found at {:?}.\n\
+                 Set OMNI_WST_CORE_CPP=/path/to/Module-I-omni-wst-core/cpp or clone the repo \
+                 next to this crate.\n\n",
+                engine_cpp
+            );
+        }
+
         build
+            .include(&engine_cpp)
             .file("cpp/wst_bridge_cuda.cpp")
             .define("OMNI_FFI_HAS_CUDA", None);
 
@@ -38,16 +47,17 @@ fn main() {
         println!("cargo:rustc-link-lib=cufft");
         println!("cargo:rerun-if-changed=cpp/wst_bridge_cuda.cpp");
         println!("cargo:rerun-if-env-changed=CUDA_LIB_DIR");
+        println!("cargo:rerun-if-env-changed=OMNI_WST_CORE_CPP");
     } else {
-        // CPU-only path. Calls the real Radix-2 FFT + Morlet cascade in
-        // cpu_wst_engine.h. No CUDA libraries are linked.
+        // CPU-only path. The Radix-2 FFT + Morlet cascade lives entirely
+        // in cpp/cpu_wst_engine.h — no external dependencies required.
         build.file("cpp/wst_bridge_cpu.cpp");
         println!("cargo:rerun-if-changed=cpp/wst_bridge_cpu.cpp");
+        println!("cargo:rerun-if-changed=cpp/cpu_wst_engine.h");
     }
 
     build.compile("omni_wst_bridge");
 
     println!("cargo:rerun-if-changed=src/lib.rs");
     println!("cargo:rerun-if-changed=cpp/wst_bridge.h");
-    println!("cargo:rerun-if-env-changed=OMNI_WST_CORE_CPP");
 }

@@ -2,8 +2,27 @@
 name = "omni-ffi"
 version = "0.1.0"
 edition = "2021"
-authors = ["Samvardhan Singh"]
-description = "Zero-cost C++/CUDA FFI Bridge for the OmniPulse WST Engine"
+rust-version = "1.70"
+authors = ["Samvardhan Singh <samvardhan03@gmail.com>"]
+description = "Zero-cost C++/CUDA FFI bridge for the OmniPulse Wavelet Scattering Transform engine — GPU-accelerated perceptual fingerprinting from Rust"
+license = "Apache-2.0"
+repository = "https://github.com/samvardhan03/Module-1.1-omni-ffi"
+homepage = "https://github.com/samvardhan03/Module-1.1-omni-ffi"
+documentation = "https://docs.rs/omni-ffi"
+readme = "README.md"
+keywords = ["wavelet", "scattering-transform", "ffi", "cuda", "fingerprinting"]
+categories = ["external-ffi-bindings", "mathematics", "science", "multimedia::audio"]
+
+# Ship the C++ bridge sources so consumers can build from the crate tarball.
+include = [
+    "src/**/*.rs",
+    "cpp/**/*.h",
+    "cpp/**/*.cpp",
+    "build.rs",
+    "Cargo.toml",
+    "README.md",
+    "LICENSE",
+]
 
 [features]
 default = []
